@@ -1,6 +1,7 @@
 import type { GeneratedBlog, GenerateBlogInput } from './types'
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+const OPENROUTER_IMAGES_URL = 'https://openrouter.ai/api/v1/images'
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024
 
 type OpenRouterMessage = {
@@ -13,6 +14,12 @@ type OpenRouterMessage = {
 
 type OpenRouterResponse = {
   choices?: Array<{ message?: OpenRouterMessage }>
+  error?: { message?: string }
+}
+
+type OpenRouterImageResponse = {
+  data?: Array<{ b64_json?: string; url?: string }>
+  images?: Array<{ b64_json?: string; url?: string; image_url?: { url?: string } }>
   error?: { message?: string }
 }
 
@@ -90,6 +97,27 @@ async function callOpenRouter(body: Record<string, unknown>): Promise<OpenRouter
   const payload = (await response.json().catch(() => ({}))) as OpenRouterResponse
   if (!response.ok) {
     throw new Error(payload.error?.message || `OpenRouter request failed (${response.status})`)
+  }
+  return payload
+}
+
+async function callOpenRouterImage(body: Record<string, unknown>): Promise<OpenRouterImageResponse> {
+  const { apiKey, siteUrl } = config()
+  const response = await fetch(OPENROUTER_IMAGES_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': siteUrl,
+      'X-Title': 'Material Mate Blog Generator',
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(120_000),
+  })
+
+  const payload = (await response.json().catch(() => ({}))) as OpenRouterImageResponse
+  if (!response.ok) {
+    throw new Error(payload.error?.message || `OpenRouter image request failed (${response.status})`)
   }
   return payload
 }
@@ -203,17 +231,22 @@ export async function generateImage(prompt: string) {
   const { imageModel } = config()
   if (!imageModel) return null
 
-  const response = await callOpenRouter({
+  const response = await callOpenRouterImage({
     model: imageModel,
-    modalities: ['image', 'text'],
-    image_config: {
-      aspect_ratio: '16:9',
-      image_size: '2K',
-    },
-    messages: [{ role: 'user', content: prompt }],
+    prompt,
+    size: '2048x1152',
   })
-  const message = response.choices?.[0]?.message
-  const imageUrl = message?.images?.[0]?.image_url?.url
+
+  const dataImage = response.data?.[0]
+  const imagesImage = response.images?.[0]
+  const base64 = dataImage?.b64_json || imagesImage?.b64_json
+  if (base64) {
+    const data = Buffer.from(base64, 'base64')
+    if (data.byteLength > MAX_IMAGE_BYTES) throw new Error('Generated image is larger than 12 MB')
+    return { mimeType: 'image/png', data }
+  }
+
+  const imageUrl = dataImage?.url || imagesImage?.url || imagesImage?.image_url?.url
   if (!imageUrl) throw new Error('The configured OpenRouter image model returned no image')
 
   const inline = decodeDataUrl(imageUrl)

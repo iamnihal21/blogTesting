@@ -40,6 +40,7 @@ export function AIBlogGenerator() {
     try {
       const response = await fetch('/api/posts/ai-generate', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })

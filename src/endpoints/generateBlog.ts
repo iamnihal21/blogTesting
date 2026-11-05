@@ -39,7 +39,8 @@ function parseInput(value: unknown): GenerateBlogInput {
 }
 
 export const generateBlog: PayloadHandler = async (req) => {
-  if (!req.user) return Response.json({ error: 'Authentication required' }, { status: 401 })
+  const { user } = await req.payload.auth({ headers: req.headers })
+  if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 })
 
   try {
     const input = parseInput(await req.json?.())

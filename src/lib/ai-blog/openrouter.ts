@@ -206,6 +206,10 @@ export async function generateImage(prompt: string) {
   const response = await callOpenRouter({
     model: imageModel,
     modalities: ['image', 'text'],
+    image_config: {
+      aspect_ratio: '16:9',
+      image_size: '2K',
+    },
     messages: [{ role: 'user', content: prompt }],
   })
   const message = response.choices?.[0]?.message

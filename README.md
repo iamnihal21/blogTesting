@@ -233,11 +233,11 @@ Configure these variables:
 ```env
 OPENROUTER_API_KEY=your-secret-key
 OPENROUTER_TEXT_MODEL=openai/gpt-4.1-mini
-# Optional: choose a current OpenRouter model whose catalog entry supports image output.
-OPENROUTER_IMAGE_MODEL=
+# Optional: leave empty to create text-only drafts.
+OPENROUTER_IMAGE_MODEL=qwen/qwen-image-2.1-turbo
 ```
 
-Model identifiers and capabilities can change, so select the image model from OpenRouter's current model catalog and confirm that it supports image output. Without `OPENROUTER_IMAGE_MODEL`, text and SEO generation still work and the draft is created without a featured image.
+The configured Qwen model generates 2K, 16:9 featured images. It is a low-cost paid model, not a free model; check its current OpenRouter price before production use. Model identifiers, capabilities, and prices can change. Without `OPENROUTER_IMAGE_MODEL`, text and SEO generation still work and the draft is created without a featured image.
 
 The API key is read only by the server-side Payload endpoint. Requests require an authenticated Payload user. OpenRouter errors are returned without exposing the key, generated files are limited to images up to 12 MB, and article content is constrained to a validated schema.
 

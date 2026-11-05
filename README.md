@@ -207,6 +207,42 @@ When you receive access to the organization's main Next.js repository, follow th
 
 ---
 
+## 🤖 AI Blog Drafts with OpenRouter
+
+Authenticated editors can generate a complete reviewable post from **Payload Admin → Posts**. The generator asks for a title, factual brief, keywords, audience, tone, author, and optional category.
+
+The server then:
+
+1. Sends the editorial brief to the configured GPT model through OpenRouter.
+2. Requires structured JSON containing the article sections, SEO metadata, tags, alt text, and a separate image brief.
+3. Optionally sends that image brief to an OpenRouter model that supports image output.
+4. Validates and uploads the image to the Payload `media` collection.
+5. Saves the article, SEO fields, tags, author, category, and image as a **draft**.
+6. Opens the Payload editor for fact checking and human approval. AI drafts are never published automatically.
+
+### Create an OpenRouter API key
+
+1. Sign in at [OpenRouter](https://openrouter.ai/).
+2. Open the **Keys** page from your account settings and create a key for this application.
+3. Give the key a clear name such as `material-mate-blog-production` and set a spending limit if the account supports one.
+4. Add credits or configure billing before using paid models.
+5. Copy the key once and store it only in the deployment or cloud environment's secret manager as `OPENROUTER_API_KEY`. Never put it in source control, screenshots, or client-side code.
+
+Configure these variables:
+
+```env
+OPENROUTER_API_KEY=your-secret-key
+OPENROUTER_TEXT_MODEL=openai/gpt-4.1-mini
+# Optional: leave empty to create text-only drafts.
+OPENROUTER_IMAGE_MODEL=qwen/qwen-image-2.1-turbo
+```
+
+The configured Qwen model generates 2K, 16:9 featured images. It is a low-cost paid model, not a free model; check its current OpenRouter price before production use. Model identifiers, capabilities, and prices can change. Without `OPENROUTER_IMAGE_MODEL`, text and SEO generation still work and the draft is created without a featured image.
+
+The API key is read only by the server-side Payload endpoint. Requests require an authenticated Payload user. OpenRouter errors are returned without exposing the key, generated files are limited to images up to 12 MB, and article content is constrained to a validated schema.
+
+---
+
 ## 📄 License
 
 Proprietary — SpeedAI Labs. All rights reserved.

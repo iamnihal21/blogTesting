@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { generateBlog } from '@/endpoints/generateBlog'
 
 export const Posts: CollectionConfig = {
   slug: 'posts',
@@ -6,7 +7,17 @@ export const Posts: CollectionConfig = {
     useAsTitle: 'title',
     defaultColumns: ['title', 'category', 'author', 'status', 'publishedAt'],
     listSearchableFields: ['title', 'slug', 'excerpt'],
+    components: {
+      beforeList: ['@/components/admin/AIBlogGenerator#AIBlogGenerator'],
+    },
   },
+  endpoints: [
+    {
+      path: '/ai-generate',
+      method: 'post',
+      handler: generateBlog,
+    },
+  ],
   access: {
     read: () => true,
   },

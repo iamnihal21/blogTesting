@@ -241,6 +241,17 @@ The configured Qwen model generates 2K, 16:9 featured images. It is a low-cost p
 
 The API key is read only by the server-side Payload endpoint. Requests require an authenticated Payload user. OpenRouter errors are returned without exposing the key, generated files are limited to images up to 12 MB, and article content is constrained to a validated schema.
 
+### Use Gemini for featured images
+
+OpenRouter can remain the text provider while Gemini generates the image. Add an API key created in Google AI Studio:
+
+```env
+GEMINI_API_KEY=your-secret-google-ai-studio-key
+GEMINI_IMAGE_MODEL=gemini-2.5-flash-image
+```
+
+When `GEMINI_API_KEY` is present, Gemini takes precedence over `OPENROUTER_IMAGE_MODEL`. The generator requests a 16:9 image, uploads the returned image bytes into Payload Media, and attaches that media record to the draft. `GOOGLE_API_KEY` is also accepted as an alternative key name. The configured Gemini model must support image output; a standard text or vision-input model cannot generate an image.
+
 ---
 
 ## 📄 License

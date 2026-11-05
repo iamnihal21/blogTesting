@@ -1,4 +1,5 @@
 import type { GeneratedBlog, GenerateBlogInput } from './types'
+import { generateGeminiImage, hasGeminiImageConfig } from './gemini'
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 const OPENROUTER_IMAGES_URL = 'https://openrouter.ai/api/v1/images'
@@ -228,6 +229,8 @@ function decodeDataUrl(url: string) {
 }
 
 export async function generateImage(prompt: string) {
+  if (hasGeminiImageConfig()) return generateGeminiImage(prompt)
+
   const { imageModel } = config()
   if (!imageModel) return null
 

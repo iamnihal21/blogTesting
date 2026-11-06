@@ -215,7 +215,7 @@ The server then:
 
 1. Sends the editorial brief to the configured GPT model through OpenRouter.
 2. Requires structured JSON containing the article sections, SEO metadata, tags, alt text, and a separate image brief.
-3. Builds a free, deterministic 1200×630 Material Mate cover from the title and category by default.
+3. Builds a free, deterministic 1200×630 abstract pixel cover from the slug and category by default.
 4. Renders the SVG template to PNG with Sharp and uploads it to the Payload `media` collection.
 5. Saves the article, SEO fields, tags, author, category, and image as a **draft**.
 6. Opens the Payload editor for fact checking and human approval. AI drafts are never published automatically.
@@ -241,7 +241,7 @@ OPENROUTER_IMAGE_MODEL=qwen/qwen-image-2.1-turbo
 
 ### Free branded cover templates
 
-`BLOG_IMAGE_MODE=template` creates every cover locally, with no image API or per-image charge. The generator uses the article slug and category to choose a repeatable Material Mate palette, adds abstract construction-inspired geometry, wraps the title safely, and renders a 1200×630 PNG. The result is used for the featured image and Open Graph image.
+`BLOG_IMAGE_MODE=template` creates every cover locally, with no image API or per-image charge. The slug and category select a repeatable palette, glow position and sparse accent squares. A 32-column grid and fixed glow radius keep the scale consistent. The PNG contains only artwork: titles remain in the page HTML. The 1200×630 result is used for the featured image and Open Graph image. This procedurally recreates the reference style rather than copying its original pixels. Existing uploaded covers are unchanged; new generations use this design.
 
 Use `BLOG_IMAGE_MODE=none` for text-only drafts. Use `BLOG_IMAGE_MODE=ai` to opt into a configured Gemini or OpenRouter image model. Model identifiers, capabilities, and prices can change, so AI image modes should be treated as optional.
 

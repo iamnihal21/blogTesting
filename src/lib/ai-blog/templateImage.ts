@@ -126,7 +126,11 @@ function hash(value: string): number {
  * Returns a deterministic number between 0 and 1.
  */
 function random(seed: number, key: string): number {
-  return hash(`${seed}:${key}`) / 4294967296
+  // Mix all bits so neighbouring keys do not produce clustered positions.
+  let value = hash(`${seed}:${key}`)
+  value = Math.imul(value ^ (value >>> 16), 0x85ebca6b)
+  value = Math.imul(value ^ (value >>> 13), 0xc2b2ae35)
+  return ((value ^ (value >>> 16)) >>> 0) / 4294967296
 }
 
 function clamp(value: number, min = 0, max = 1): number {
@@ -255,23 +259,19 @@ export async function generateTemplateImage(input: TemplateImageInput) {
    * Their positions are deterministic for each article.
    */
   const accentSquares: string[] = []
-  const accentCount = 5 + Math.floor(random(seed, 'accent-count') * 4)
+  const accentCount = 7
 
   for (let index = 0; index < accentCount; index += 1) {
-    const column = Math.floor(
-      random(seed, `accent-x-${index}`) * columns,
-    )
-
-    const row = Math.floor(
-      random(seed, `accent-y-${index}`) * rows,
-    )
-
-    const colorIndex = Math.floor(
-      random(seed, `accent-color-${index}`) *
-        palette.accents.length,
-    )
-
-    const opacity = 0.48 + random(seed, `accent-opacity-${index}`) * 0.4
+    // Spread accents across distinct columns and keep them inside the canvas.
+    const column = 2 + index * 4 + Math.floor(random(seed, `accent-x-${index}`) * 3)
+    const row = 1 + Math.floor(random(seed, `accent-y-${index}`) * (Math.floor(height / tileSize) - 2))
+    const accentColors: RGB[] = [
+      adjustBrightness(palette.dark, -22),
+      mixColor(palette.light, [255, 240, 209], 0.55),
+      palette.accents[0],
+    ]
+    const color = accentColors[index % accentColors.length]
+    const opacity = 0.78 + random(seed, `accent-opacity-${index}`) * 0.16
 
     accentSquares.push(
       `<rect
@@ -279,7 +279,7 @@ export async function generateTemplateImage(input: TemplateImageInput) {
         y="${row * tileSize}"
         width="${tileSize}"
         height="${tileSize}"
-        fill="${rgb(palette.accents[colorIndex])}"
+        fill="${rgb(color)}"
         opacity="${opacity.toFixed(2)}"
       />`,
     )

@@ -159,6 +159,14 @@ function rgb(color: RGB): string {
   return `rgb(${color[0]}, ${color[1]}, ${color[2]})`
 }
 
+function luminance(color: RGB): number {
+  const linear = color.map((channel) => {
+    const value = channel / 255
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
+  })
+  return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722
+}
+
 /**
  * Creates a left-to-right background gradient.
  *
@@ -189,6 +197,9 @@ export async function generateTemplateImage(input: TemplateImageInput) {
   const columns = 32
   const tileSize = width / columns
   const rows = Math.ceil(height / tileSize)
+  // Include a tile-sized buffer around the maximum title bounds.
+  const hasTitle = Boolean(input.title.trim())
+  const textArea = { left: 448, top: 26, right: 1174, bottom: 342 }
 
   const seed = hash(`${input.slug}:${input.category || ''}`)
 
@@ -248,6 +259,20 @@ export async function generateTemplateImage(input: TemplateImageInput) {
 
       color = mixColor(color, palette.glow, glowStrength * 0.92)
 
+      // Lighten existing tiles, rather than adding a white panel. Every tile
+      // beneath the dark title reaches at least 4.5:1 contrast; fade outside it.
+      if (hasTitle) {
+        const dx = Math.max(textArea.left - (x + tileSize), x - textArea.right, 0)
+        const dy = Math.max(textArea.top - (y + tileSize), y - textArea.bottom, 0)
+        const blend = clamp(1 - Math.hypot(dx, dy) / 120)
+        let readable = color
+        const minimumLuminance = 4.5 * (luminance([32, 28, 50]) + 0.05) - 0.05
+        while (luminance(readable) < minimumLuminance) {
+          readable = mixColor(readable, [246, 244, 250], 0.08)
+        }
+        color = mixColor(color, readable, blend)
+      }
+
       tiles.push(
         `<rect x="${x}" y="${y}" width="${tileSize + 0.15}" height="${tileSize + 0.15}" fill="${rgb(color)}"/>`,
       )
@@ -264,7 +289,14 @@ export async function generateTemplateImage(input: TemplateImageInput) {
   for (let index = 0; index < accentCount; index += 1) {
     // Spread accents across distinct columns and keep them inside the canvas.
     const column = 2 + index * 4 + Math.floor(random(seed, `accent-x-${index}`) * 3)
-    const row = 1 + Math.floor(random(seed, `accent-y-${index}`) * (Math.floor(height / tileSize) - 2))
+    let row = 1 + Math.floor(random(seed, `accent-y-${index}`) * (Math.floor(height / tileSize) - 2))
+    if (hasTitle && (column + 1) * tileSize > textArea.left &&
+        column * tileSize < textArea.right && (row + 1) * tileSize > textArea.top &&
+        row * tileSize < textArea.bottom) {
+      // Retain the accent, but move it below the title's clear space.
+      const firstRow = Math.ceil(textArea.bottom / tileSize)
+      row = firstRow + Math.floor(random(seed, `accent-safe-${index}`) * (Math.floor(height / tileSize) - firstRow - 1))
+    }
     const accentColors: RGB[] = [
       adjustBrightness(palette.dark, -22),
       mixColor(palette.light, [255, 240, 209], 0.55),

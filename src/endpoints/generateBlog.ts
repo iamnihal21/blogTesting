@@ -4,6 +4,7 @@ import { articleToLexical } from '@/lib/ai-blog/lexical'
 import { generateArticle, generateImage } from '@/lib/ai-blog/openrouter'
 import { generateTemplateImage } from '@/lib/ai-blog/templateImage'
 import type { GenerateBlogInput } from '@/lib/ai-blog/types'
+import { parseService, SERVICE_NAMES } from '@/lib/ai-blog/serviceCategory'
 
 function extensionFor(mimeType: string) {
   if (mimeType === 'image/jpeg') return 'jpg'
@@ -45,11 +46,31 @@ export const generateBlog: PayloadHandler = async (req) => {
 
   try {
     const input = parseInput(await req.json?.())
-    const article = await generateArticle(input)
-    const imageMode = process.env.BLOG_IMAGE_MODE || 'template'
-    const category = input.category
+    const selectedCategory = input.category
       ? await req.payload.findByID({ collection: 'categories', id: input.category, depth: 0, req })
       : undefined
+    const selectedService = selectedCategory
+      ? parseService(selectedCategory.slug) || parseService(selectedCategory.name)
+      : undefined
+    if (selectedCategory && !selectedService) {
+      return Response.json({ error: 'Choose Furniture, Roofing or Plumbing, or leave the category automatic.' }, { status: 400 })
+    }
+    const article = await generateArticle(input)
+    const imageMode = process.env.BLOG_IMAGE_MODE || 'template'
+    const service = selectedService || article.serviceCategory
+    const findCategory = async () => (await req.payload.find({
+      collection: 'categories', where: { slug: { equals: service } }, limit: 1, depth: 0,
+    })).docs[0]
+    let category = selectedCategory || await findCategory()
+    if (!category) {
+      try {
+        category = await req.payload.create({ collection: 'categories', data: { name: SERVICE_NAMES[service], slug: service } })
+      } catch (error) {
+        // Another request may have created the same unique slug concurrently.
+        category = await findCategory()
+        if (!category) throw error
+      }
+    }
     const generatedImage = imageMode === 'none'
       ? null
       : imageMode === 'ai'
@@ -58,6 +79,7 @@ export const generateBlog: PayloadHandler = async (req) => {
             title: article.title,
             slug: article.slug,
             category: category?.name,
+            serviceCategory: service,
           })
     const imageAlt = imageMode === 'template'
       ? `${article.title} — Material Mate ${category?.name || 'guide'} cover`
@@ -88,7 +110,7 @@ export const generateBlog: PayloadHandler = async (req) => {
         excerpt: article.excerpt,
         content: articleToLexical(article),
         author: input.author,
-        category: input.category,
+        category: category.id,
         featuredImage,
         tags: article.tags.map((tag) => ({ tag })),
         status: 'draft',

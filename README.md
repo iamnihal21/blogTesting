@@ -247,7 +247,13 @@ OPENROUTER_IMAGE_MODEL=qwen/qwen-image-2.1-turbo
 
 ### Free branded cover templates
 
-`BLOG_IMAGE_MODE=template` creates every cover locally, with no image API or per-image charge. The slug and category select a repeatable palette, glow position and sparse accent squares. A 32-column grid and fixed glow radius keep the scale consistent. The PNG contains only artwork: titles remain in the page HTML. The 1200×630 result is used for the featured image and Open Graph image. This procedurally recreates the reference style rather than copying its original pixels. Existing uploaded covers are unchanged; new generations use this design.
+Generated articles now include a validated primary service: Furniture, Roofing or Plumbing. The generator saves the matching Payload category (creating it if absent). An existing service selected in the admin dropdown overrides the automatic classification; leave it on **Auto-detect from article** otherwise. Other existing categories and posts are preserved.
+
+Template covers use a sofa, roof or pipe-and-drop pixel symbol for those services, with the original gradient, accent squares and two-line dark headline. The symbols are rendered locally, with no extra image API request. Existing uploaded covers do not change automatically; changing an existing post's category also does not regenerate its cover. Other categories retain the globe when using the template function directly.
+
+`BLOG_IMAGE_MODE=template` creates every cover locally, with no image API or per-image charge. The slug and category select a repeatable palette and sparse accent squares. A 32-column grid keeps the scale consistent. Covers include a dark, right-aligned headline limited to two lines; the complete title remains in the page HTML. The 1200×630 result is used for the featured image and Open Graph image. Existing uploaded covers are unchanged; new generations use this design.
+
+Run `node --import tsx scripts/test-service-generation.ts` to test classification, category overrides, media/post linkage and rejection paths with simulated provider and database responses (no credits or database required).
 
 Use `BLOG_IMAGE_MODE=none` for text-only drafts. Use `BLOG_IMAGE_MODE=ai` to opt into a configured Gemini or OpenRouter image model. Model identifiers, capabilities, and prices can change, so AI image modes should be treated as optional.
 

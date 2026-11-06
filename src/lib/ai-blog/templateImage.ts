@@ -1,9 +1,11 @@
 import sharp from 'sharp'
+import { parseService, SERVICE_ICONS, type ServiceCategory } from './serviceCategory'
 
 type TemplateImageInput = {
   title: string
   slug: string
   category?: string
+  serviceCategory?: ServiceCategory
 }
 
 function escapeText(value: string) {
@@ -240,6 +242,11 @@ export async function generateTemplateImage(input: TemplateImageInput) {
   const seed = hash(`${input.slug}:${input.category || ''}`)
 
   const palette = PALETTES[seed % PALETTES.length]
+  const service = input.serviceCategory || parseService(input.category)
+  const icon = service ? SERVICE_ICONS[service] : undefined
+  // Keep the symbol on the left, clear of the title, at the original grid scale.
+  const iconColumn = 1
+  const iconRow = 5
 
   /**
    * Move the glow between images while keeping it inside the canvas.
@@ -293,7 +300,16 @@ export async function generateTemplateImage(input: TemplateImageInput) {
         -(distance * distance) / (2 * glowRadius * glowRadius),
       )
 
-      color = mixColor(color, palette.glow, glowStrength * 0.92)
+      if (icon) {
+        const iconDistance = Math.hypot(centerX - 6.5 * tileSize, centerY - 9.5 * tileSize)
+        const halo = Math.exp(-(iconDistance ** 2) / (2 * glowRadius ** 2)) * 0.22
+        color = mixColor(color, palette.glow, halo)
+        if (icon[row - iconRow]?.[column - iconColumn] === '1') {
+          color = mixColor(palette.glow, palette.light, 0.12 + (row % 3) * 0.06)
+        }
+      } else {
+        color = mixColor(color, palette.glow, glowStrength * 0.92)
+      }
 
       // Lighten existing tiles, rather than adding a white panel. Every tile
       // beneath the dark title reaches at least 4.5:1 contrast; fade outside it.
@@ -326,6 +342,9 @@ export async function generateTemplateImage(input: TemplateImageInput) {
     // Spread accents across distinct columns and keep them inside the canvas.
     const column = 2 + index * 4 + Math.floor(random(seed, `accent-x-${index}`) * 3)
     let row = 1 + Math.floor(random(seed, `accent-y-${index}`) * (Math.floor(height / tileSize) - 2))
+    if (icon && column >= iconColumn && column < iconColumn + 11 && row >= iconRow && row < iconRow + 9) {
+      row = 1 + index % 3
+    }
     if (hasTitle && (column + 1) * tileSize > textArea.left &&
         column * tileSize < textArea.right && (row + 1) * tileSize > textArea.top &&
         row * tileSize < textArea.bottom) {

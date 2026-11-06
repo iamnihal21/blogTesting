@@ -1,3 +1,5 @@
+import type { ServiceCategory } from './serviceCategory'
+
 export type GenerateBlogInput = {
   title: string
   brief: string
@@ -9,6 +11,7 @@ export type GenerateBlogInput = {
 }
 
 export type GeneratedBlog = {
+  serviceCategory: ServiceCategory
   title: string
   slug: string
   excerpt: string

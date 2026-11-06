@@ -1,6 +1,7 @@
 'use client'
 
 import React, { FormEvent, useEffect, useState } from 'react'
+import { parseService } from '@/lib/ai-blog/serviceCategory'
 
 type Option = { id: string | number; name: string }
 
@@ -17,7 +18,7 @@ export function AIBlogGenerator() {
       fetch('/api/categories?limit=100&depth=0').then((res) => res.json()),
     ]).then(([authorData, categoryData]) => {
       setAuthors(authorData.docs || [])
-      setCategories(categoryData.docs || [])
+      setCategories((categoryData.docs || []).filter((item: Option & { slug?: string }) => parseService(item.slug) || parseService(item.name)))
     }).catch(() => setError('Could not load authors and categories.'))
   }, [])
 
@@ -70,7 +71,7 @@ export function AIBlogGenerator() {
           <label>Audience<input name="audience" defaultValue="Australian homeowners and customers seeking trade services" style={{ display: 'block', marginTop: 6, width: '100%' }} /></label>
           <label>Tone<input name="tone" defaultValue="Helpful, credible and professional" style={{ display: 'block', marginTop: 6, width: '100%' }} /></label>
           <label>Author<select name="author" required style={{ display: 'block', marginTop: 6, width: '100%' }}><option value="">Select an author</option>{authors.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-          <label>Category<select name="category" style={{ display: 'block', marginTop: 6, width: '100%' }}><option value="">No category</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label>Service category<select name="category" style={{ display: 'block', marginTop: 6, width: '100%' }}><option value="">Auto-detect from article</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         </div>
         <div><button className="btn btn--style-primary" type="submit" disabled={busy || authors.length === 0}>{busy ? 'Generating…' : 'Generate draft'}</button></div>
         {message && <p role="status" style={{ margin: 0 }}>{message}</p>}

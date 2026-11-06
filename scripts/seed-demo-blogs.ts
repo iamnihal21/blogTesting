@@ -45,6 +45,7 @@ try {
     const title = `[DEMO] ${topic}`
     const excerpt = `Test content only. ${tip}`
     const article: GeneratedBlog = {
+      serviceCategory: 'furniture',
       title, slug, excerpt, metaTitle: title.slice(0, 70), metaDescription: excerpt.slice(0, 160),
       tags: ['demo', 'testing'], imagePrompt: '', imageAlt: `${title} — abstract pixel cover`,
       sections: [

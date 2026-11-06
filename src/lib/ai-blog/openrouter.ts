@@ -1,4 +1,5 @@
 import type { GeneratedBlog, GenerateBlogInput } from './types'
+import { SERVICES } from './serviceCategory'
 import { generateGeminiImage, hasGeminiImageConfig } from './gemini'
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
@@ -28,6 +29,7 @@ const articleSchema = {
   type: 'object',
   additionalProperties: false,
   required: [
+    'serviceCategory',
     'title',
     'slug',
     'excerpt',
@@ -39,6 +41,7 @@ const articleSchema = {
     'imageAlt',
   ],
   properties: {
+    serviceCategory: { type: 'string', enum: SERVICES },
     title: { type: 'string' },
     slug: { type: 'string' },
     excerpt: { type: 'string' },
@@ -142,6 +145,9 @@ function cleanSlug(value: string) {
 function assertGeneratedBlog(value: unknown): GeneratedBlog {
   if (!value || typeof value !== 'object') throw new Error('The model returned an invalid article')
   const article = value as Partial<GeneratedBlog>
+  if (!SERVICES.includes(article.serviceCategory as typeof SERVICES[number])) {
+    throw new Error('The model must classify the article as furniture, roofing or plumbing')
+  }
   const strings: Array<keyof GeneratedBlog> = [
     'title', 'slug', 'excerpt', 'metaTitle', 'metaDescription', 'imagePrompt', 'imageAlt',
   ]
@@ -191,6 +197,7 @@ export async function generateArticle(input: GenerateBlogInput): Promise<Generat
         role: 'system',
         content: [
           'You are the senior Australian editor for Material Mate, a marketplace for construction, furniture and trade services.',
+          'Classify the complete article into exactly one serviceCategory: furniture, roofing, or plumbing. Choose the primary service discussed; for mixed topics choose the dominant service based on the brief and article, not an arbitrary keyword.',
           'Write genuinely useful, specific content in Australian English. Use the supplied brief as the factual source of truth.',
           'Do not invent prices, statistics, regulations, certifications, customer stories or service availability.',
           'Optimise naturally for search intent without keyword stuffing. Write clear headings and practical paragraphs.',

@@ -304,7 +304,33 @@ export async function generateTemplateImage(input: TemplateImageInput) {
     </svg>
   `
 
+  // Pango measures and wraps the title, shrinking longer titles to fit.
+  // Escape markup so article titles are always rendered as literal text.
+  const escapedTitle = input.title.trim()
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+  const titleWidth = 650
+  const title = escapedTitle ? await sharp({
+    text: {
+      text: `<span foreground="#201C32">${escapedTitle}</span>`,
+      font: 'DejaVu Sans Bold 48',
+      width: titleWidth,
+      height: 240,
+      align: 'right',
+      wrap: 'word-char',
+      rgba: true,
+    },
+  }).png().toBuffer({ resolveWithObject: true }) : undefined
+
   const data = await sharp(Buffer.from(svg))
+    .composite(title ? [{
+      input: title.data,
+      left: width - 64 - title.info.width,
+      top: 64,
+    }] : [])
     .png({ compressionLevel: 9 })
     .toBuffer()
 

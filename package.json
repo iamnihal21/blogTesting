@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "demo:blogs": "cross-env NODE_OPTIONS='--no-deprecation' payload run scripts/seed-demo-blogs.ts",
     "dev": "cross-env NODE_OPTIONS='--no-deprecation' next dev",
     "build": "cross-env NODE_OPTIONS='--no-deprecation' next build",
     "start": "next start",

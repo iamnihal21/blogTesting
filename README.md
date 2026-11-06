@@ -199,6 +199,12 @@ When you receive access to the organization's main Next.js repository, follow th
 
 ## 🛠️ Available Scripts
 
+### Generate 10 demo blogs
+
+Point `DATABASE_URI` in `.env` at a **test database**, then run `npm run demo:blogs` from the repository root. This creates ten `[DEMO]` draft posts with sample rich text, SEO fields and local pixel covers, plus a demo author and category. It uses no AI APIs or credits. Run one instance at a time; running it again skips existing `demo-test-blog-*` posts. It refuses to run with `NODE_ENV=production`.
+
+Find the drafts in **Payload Admin → Posts**. They are intentionally absent from the public blog until manually published; use only a local/test site for publication tests. Existing posts are not modified. Cover files are saved through Payload's configured media storage.
+
 - `npm run dev` - Start local development server with Turbopack/Next.js
 - `npm run build` - Compile and build the production bundle
 - `npm run start` - Run the production server

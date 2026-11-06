@@ -221,7 +221,7 @@ The server then:
 
 1. Sends the editorial brief to the configured GPT model through OpenRouter.
 2. Requires structured JSON containing the article sections, SEO metadata, tags, alt text, and a separate image brief.
-3. Builds a free, deterministic 1200×630 abstract pixel cover from the slug and category by default.
+3. Builds a free, deterministic 1200×630 category scene from the article title, slug and service by default.
 4. Renders the SVG template to PNG with Sharp and uploads it to the Payload `media` collection.
 5. Saves the article, SEO fields, tags, author, category, and image as a **draft**.
 6. Opens the Payload editor for fact checking and human approval. AI drafts are never published automatically.
@@ -249,9 +249,9 @@ OPENROUTER_IMAGE_MODEL=qwen/qwen-image-2.1-turbo
 
 Generated articles now include a validated primary service: Furniture, Roofing or Plumbing. The generator saves the matching Payload category (creating it if absent). An existing service selected in the admin dropdown overrides the automatic classification; leave it on **Auto-detect from article** otherwise. Other existing categories and posts are preserved.
 
-Template covers use a sofa, roof or pipe-and-drop pixel symbol for those services, with the original gradient, accent squares and two-line dark headline. The symbols are rendered locally, with no extra image API request. Existing uploaded covers do not change automatically; changing an existing post's category also does not regenerate its cover. Other categories retain the globe when using the template function directly.
+Template covers provide four curated scenes for each service. Furniture can select a sofa, storage unit, dining table or armchair; Roofing can select a house roof, roof tiles, inspection ladder or rain gutter; Plumbing can select a tap, pipe route, basin or shower. Title keywords select the closest scene, with a stable slug-based fallback for broader topics. Category-specific palettes, subtle colour variation and sparse accent squares keep repeated covers distinct.
 
-`BLOG_IMAGE_MODE=template` creates every cover locally, with no image API or per-image charge. The slug and category select a repeatable palette and sparse accent squares. A 32-column grid keeps the scale consistent. Covers include a dark, right-aligned headline limited to two lines; the complete title remains in the page HTML. The 1200×630 result is used for the featured image and Open Graph image. Existing uploaded covers are unchanged; new generations use this design.
+`BLOG_IMAGE_MODE=template` creates every cover locally, with no image API or per-image charge. A 32-column grid keeps the scale consistent. The scene remains on the left and the dark, right-aligned headline stays in a protected area limited to two lines. The 1200×630 result is used for the featured image and Open Graph image. Existing uploaded covers are unchanged; new generations use this design. Run `npm run test:covers` to validate all twelve scenes without a database or API key.
 
 Run `node --import tsx scripts/test-service-generation.ts` to test classification, category overrides, media/post linkage and rejection paths with simulated provider and database responses (no credits or database required).
 

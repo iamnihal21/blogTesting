@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "demo:blogs": "cross-env NODE_OPTIONS='--no-deprecation' payload run scripts/seed-demo-blogs.ts",
+    "prototype:cover": "node --import tsx scripts/prototype-vector-cover.ts",
     "test:covers": "node --import tsx scripts/test-cover-scenes.ts",
     "dev": "cross-env NODE_OPTIONS='--no-deprecation' next dev",
     "build": "cross-env NODE_OPTIONS='--no-deprecation' next build",

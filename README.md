@@ -247,6 +247,10 @@ OPENROUTER_IMAGE_MODEL=qwen/qwen-image-2.1-turbo
 
 ### Free non-AI vector covers
 
+The shared generator is `src/lib/ai-blog/vectorImage.ts`. It exports `createVectorCoverSVG({ title, slug, serviceCategory })` for editable SVG and `generateVectorImage(...)` for PNG bytes. Use `furniture`, `roofing` or `plumbing` for `serviceCategory`. Rich category palettes, warm lighting and decorative objects are rendered locally; the slug keeps colour selection repeatable.
+
+Run `npm run export:covers` to export nine examples (three per category) as SVG and PNG, plus a contact sheet at `generated-covers/preview.png`. No API key, database or running server is needed. The export script is `scripts/export-vector-covers.ts`; edit its example titles to preview other topics. New drafts in Payload use this same generator automatically when `BLOG_IMAGE_MODE=vector` or `template`.
+
 Generated articles now include a validated primary service: Furniture, Roofing or Plumbing. The generator saves the matching Payload category (creating it if absent). An existing service selected in the admin dropdown overrides the automatic classification; leave it on **Auto-detect from article** otherwise. Other existing categories and posts are preserved.
 
 The default renderer creates detailed flat SVG illustrations without an image model. Furniture uses a furnished room and changes its centrepiece between a sofa, storage unit and table. Roofing uses a house scene and adds weather or an inspection ladder when relevant. Plumbing uses a fitted bathroom and changes between shower, pipework and basin details. The slug selects a repeatable category palette, and a small service badge keeps the system consistent.

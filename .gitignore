@@ -11,6 +11,7 @@
 
 # Testing & Coverage
 /coverage
+/generated-covers/
 *.lcov
 
 # Next.js Build Outputs

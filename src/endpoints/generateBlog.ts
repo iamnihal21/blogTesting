@@ -2,6 +2,7 @@ import type { PayloadHandler } from 'payload'
 
 import { articleToLexical } from '@/lib/ai-blog/lexical'
 import { generateArticle, generateImage } from '@/lib/ai-blog/openrouter'
+import { generateTemplateImage } from '@/lib/ai-blog/templateImage'
 import type { GenerateBlogInput } from '@/lib/ai-blog/types'
 
 function extensionFor(mimeType: string) {
@@ -45,17 +46,32 @@ export const generateBlog: PayloadHandler = async (req) => {
   try {
     const input = parseInput(await req.json?.())
     const article = await generateArticle(input)
-    const generatedImage = await generateImage(article.imagePrompt)
+    const imageMode = process.env.BLOG_IMAGE_MODE || 'template'
+    const category = input.category
+      ? await req.payload.findByID({ collection: 'categories', id: input.category, depth: 0, req })
+      : undefined
+    const generatedImage = imageMode === 'none'
+      ? null
+      : imageMode === 'ai'
+        ? await generateImage(article.imagePrompt)
+        : await generateTemplateImage({
+            title: article.title,
+            slug: article.slug,
+            category: category?.name,
+          })
+    const imageAlt = imageMode === 'template'
+      ? `${article.title} — Material Mate ${category?.name || 'guide'} cover`
+      : article.imageAlt
 
     let featuredImage: number | undefined
     if (generatedImage) {
       const media = await req.payload.create({
         collection: 'media',
-        data: { alt: article.imageAlt },
+        data: { alt: imageAlt },
         file: {
           data: generatedImage.data,
           mimetype: generatedImage.mimeType,
-          name: `${article.slug}.${extensionFor(generatedImage.mimeType)}`,
+          name: `${article.slug}-cover.${extensionFor(generatedImage.mimeType)}`,
           size: generatedImage.data.byteLength,
         },
         req,

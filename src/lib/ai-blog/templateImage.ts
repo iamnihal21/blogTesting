@@ -259,16 +259,16 @@ export async function generateTemplateImage(input: TemplateImageInput) {
 
       color = mixColor(color, palette.glow, glowStrength * 0.92)
 
-      // Lighten existing tiles, rather than adding a white panel. Every tile
-      // beneath the dark title reaches at least 4.5:1 contrast; fade outside it.
+      // Darken existing tiles for white text. Every tile beneath the title
+      // reaches at least 4.5:1 contrast; fade the adjustment outside it.
       if (hasTitle) {
         const dx = Math.max(textArea.left - (x + tileSize), x - textArea.right, 0)
         const dy = Math.max(textArea.top - (y + tileSize), y - textArea.bottom, 0)
         const blend = clamp(1 - Math.hypot(dx, dy) / 120)
         let readable = color
-        const minimumLuminance = 4.5 * (luminance([32, 28, 50]) + 0.05) - 0.05
-        while (luminance(readable) < minimumLuminance) {
-          readable = mixColor(readable, [246, 244, 250], 0.08)
+        const maximumLuminance = (luminance([255, 255, 255]) + 0.05) / 4.5 - 0.05
+        while (luminance(readable) > maximumLuminance) {
+          readable = mixColor(readable, [32, 28, 50], 0.08)
         }
         color = mixColor(color, readable, blend)
       }
@@ -347,7 +347,7 @@ export async function generateTemplateImage(input: TemplateImageInput) {
   const titleWidth = 650
   const title = escapedTitle ? await sharp({
     text: {
-      text: `<span foreground="#201C32">${escapedTitle}</span>`,
+      text: `<span foreground="#FFFFFF">${escapedTitle}</span>`,
       font: 'DejaVu Sans Bold 48',
       width: titleWidth,
       height: 240,

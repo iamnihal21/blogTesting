@@ -239,19 +239,19 @@ Configure these variables:
 ```env
 OPENROUTER_API_KEY=your-secret-key
 OPENROUTER_TEXT_MODEL=openai/gpt-4.1-mini
-# Free local cover generation is the default. Other options are ai and none.
-BLOG_IMAGE_MODE=template
+# Free local vector cover generation is the default.
+BLOG_IMAGE_MODE=vector
 # Used only when BLOG_IMAGE_MODE=ai.
 OPENROUTER_IMAGE_MODEL=qwen/qwen-image-2.1-turbo
 ```
 
-### Free branded cover templates
+### Free non-AI vector covers
 
 Generated articles now include a validated primary service: Furniture, Roofing or Plumbing. The generator saves the matching Payload category (creating it if absent). An existing service selected in the admin dropdown overrides the automatic classification; leave it on **Auto-detect from article** otherwise. Other existing categories and posts are preserved.
 
-Template covers provide four curated scenes for each service. Furniture can select a sofa, storage unit, dining table or armchair; Roofing can select a house roof, roof tiles, inspection ladder or rain gutter; Plumbing can select a tap, pipe route, basin or shower. Title keywords select the closest scene, with a stable slug-based fallback for broader topics. Category-specific palettes, subtle colour variation and sparse accent squares keep repeated covers distinct.
+The default renderer creates detailed flat SVG illustrations without an image model. Furniture uses a furnished room and changes its centrepiece between a sofa, storage unit and table. Roofing uses a house scene and adds weather or an inspection ladder when relevant. Plumbing uses a fitted bathroom and changes between shower, pipework and basin details. The slug selects a repeatable category palette, and a small service badge keeps the system consistent.
 
-`BLOG_IMAGE_MODE=template` creates every cover locally, with no image API or per-image charge. A 32-column grid keeps the scale consistent. The scene remains on the left and the dark, right-aligned headline stays in a protected area limited to two lines. The 1200×630 result is used for the featured image and Open Graph image. Existing uploaded covers are unchanged; new generations use this design. Run `npm run test:covers` to validate all twelve scenes without a database or API key.
+`BLOG_IMAGE_MODE=vector` creates the SVG locally, renders it to a 1200×630 PNG with Sharp, uploads it to Payload Media, and assigns it as both the featured and Open Graph image. It has no image API or per-image charge. The article title stays in the page layout instead of being repeated inside the cover. `template` is accepted as a backwards-compatible alias for vector mode, so existing local `.env` files switch to the new renderer after pulling. Use `BLOG_IMAGE_MODE=pixel` only to retain the earlier pixel renderer. Existing uploaded covers are unchanged; newly generated drafts use the vector design.
 
 Run `node --import tsx scripts/test-service-generation.ts` to test classification, category overrides, media/post linkage and rejection paths with simulated provider and database responses (no credits or database required).
 

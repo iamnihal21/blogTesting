@@ -77,12 +77,12 @@ export default async function BlogListingPage() {
                 {featuredImage?.url && (
                   <Link href={`/blog/${post.slug}`}>
                     <img
-                      src={featuredImage.sizes?.card?.url || featuredImage.url}
+                      src={featuredImage.sizes?.feature?.url || featuredImage.url}
                       alt={featuredImage.alt || post.title}
                       style={{
                         width: '100%',
-                        height: '220px',
-                        objectFit: 'cover',
+                        height: 'auto',
+                        display: 'block',
                       }}
                     />
                   </Link>

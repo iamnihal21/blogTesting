@@ -6,6 +6,42 @@ type TemplateImageInput = {
   category?: string
 }
 
+function escapeText(value: string) {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+async function coverHeadline(title: string, width: number) {
+  if (!title.trim()) return ''
+  const words = title.replace(/^\[DEMO\]\s*/i, '').trim().split(/\s+/)
+  const measure = async (text: string) => (await sharp({ text: {
+    text: escapeText(text), font: 'DejaVu Sans Bold 48', dpi: 72,
+  } }).metadata()).width || 0
+  const lines: string[] = []
+  let line = ''
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word
+    if (await measure(candidate) <= width) {
+      line = candidate
+    } else if (lines.length === 0 && line) {
+      lines.push(line)
+      line = word
+    } else {
+      break
+    }
+  }
+  if (line) lines.push(line)
+  if (!lines.length) lines.push(words[0] || '')
+  if (lines.join(' ') !== words.join(' ') || await measure(lines.at(-1)!) > width) {
+    let last = lines.pop()!
+    while (last && await measure(`${last}…`) > width) {
+      const boundary = last.lastIndexOf(' ')
+      last = boundary > 0 ? last.slice(0, boundary) : last.slice(0, -1)
+    }
+    lines.push(`${last}…`)
+  }
+  return lines.join('\n')
+}
+
 type RGB = [number, number, number]
 
 type Palette = {
@@ -338,7 +374,7 @@ export async function generateTemplateImage(input: TemplateImageInput) {
 
   // Pango measures and wraps the title, shrinking longer titles to fit.
   // Escape markup so article titles are always rendered as literal text.
-  const escapedTitle = input.title.trim()
+  const escapedTitle = (await coverHeadline(input.title, 640))
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -350,7 +386,7 @@ export async function generateTemplateImage(input: TemplateImageInput) {
       text: `<span foreground="#201C32">${escapedTitle}</span>`,
       font: 'DejaVu Sans Bold 48',
       width: titleWidth,
-      height: 240,
+      dpi: 72,
       align: 'right',
       wrap: 'word-char',
       rgba: true,

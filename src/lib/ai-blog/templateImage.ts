@@ -13,16 +13,43 @@ function escapeText(value: string) {
 }
 
 async function coverHeadline(title: string, width: number) {
-  if (!title.trim()) return ''
+  if (!title.trim()) return { text: '', fontSize: 48 }
   const words = title.replace(/^\[DEMO\]\s*/i, '').trim().split(/\s+/)
-  const measure = async (text: string) => (await sharp({ text: {
-    text: escapeText(text), font: 'DejaVu Sans Bold 48', dpi: 72,
+  const measure = async (text: string, fontSize: number) => (await sharp({ text: {
+    text: escapeText(text), font: `DejaVu Sans Bold ${fontSize}`, dpi: 72,
   } }).metadata()).width || 0
+
+  const wrapCompleteTitle = async (fontSize: number) => {
+    const lines: string[] = []
+    let line = ''
+    for (const word of words) {
+      const candidate = line ? `${line} ${word}` : word
+      if (await measure(candidate, fontSize) <= width) {
+        line = candidate
+      } else if (lines.length === 0 && line && await measure(word, fontSize) <= width) {
+        lines.push(line)
+        line = word
+      } else {
+        return undefined
+      }
+    }
+    if (line) lines.push(line)
+    return lines.length <= 2 ? lines : undefined
+  }
+
+  // Preserve the complete title whenever it remains readable at thumbnail size.
+  for (let fontSize = 48; fontSize >= 36; fontSize -= 2) {
+    const lines = await wrapCompleteTitle(fontSize)
+    if (lines) return { text: lines.join('\n'), fontSize }
+  }
+
+  // Extremely long titles still stay inside two lines at the minimum size.
+  const fontSize = 36
   const lines: string[] = []
   let line = ''
   for (const word of words) {
     const candidate = line ? `${line} ${word}` : word
-    if (await measure(candidate) <= width) {
+    if (await measure(candidate, fontSize) <= width) {
       line = candidate
     } else if (lines.length === 0 && line) {
       lines.push(line)
@@ -31,17 +58,15 @@ async function coverHeadline(title: string, width: number) {
       break
     }
   }
-  if (line) lines.push(line)
+  if (line && lines.length < 2) lines.push(line)
   if (!lines.length) lines.push(words[0] || '')
-  if (lines.join(' ') !== words.join(' ') || await measure(lines.at(-1)!) > width) {
-    let last = lines.pop()!
-    while (last && await measure(`${last}…`) > width) {
-      const boundary = last.lastIndexOf(' ')
-      last = boundary > 0 ? last.slice(0, boundary) : last.slice(0, -1)
-    }
-    lines.push(`${last}…`)
+  let last = lines.pop()!
+  while (last && await measure(`${last}…`, fontSize) > width) {
+    const boundary = last.lastIndexOf(' ')
+    last = boundary > 0 ? last.slice(0, boundary) : last.slice(0, -1)
   }
-  return lines.join('\n')
+  lines.push(`${last}…`)
+  return { text: lines.join('\n'), fontSize }
 }
 
 type RGB = [number, number, number]
@@ -393,7 +418,8 @@ export async function generateTemplateImage(input: TemplateImageInput) {
 
   // Pango measures and wraps the title, shrinking longer titles to fit.
   // Escape markup so article titles are always rendered as literal text.
-  const escapedTitle = (await coverHeadline(input.title, 640))
+  const headline = await coverHeadline(input.title, 640)
+  const escapedTitle = headline.text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -403,7 +429,7 @@ export async function generateTemplateImage(input: TemplateImageInput) {
   const title = escapedTitle ? await sharp({
     text: {
       text: `<span foreground="#201C32">${escapedTitle}</span>`,
-      font: 'DejaVu Sans Bold 48',
+      font: `DejaVu Sans Bold ${headline.fontSize}`,
       width: titleWidth,
       dpi: 72,
       align: 'right',

@@ -55,7 +55,12 @@ try {
         { heading: 'Testing checklist', paragraphs: ['Check the featured image, heading spacing, paragraph layout, author, category, tags and SEO fields in the editor. This post is intentionally saved as a draft.'] },
       ],
     }
-    const image = await generateTemplateImage({ title, slug, category: category.name })
+    const image = await generateTemplateImage({
+      title,
+      slug,
+      category: category.name,
+      serviceCategory: article.serviceCategory,
+    })
     const media = await payload.create({
       collection: 'media', data: { alt: article.imageAlt },
       file: { data: image.data, mimetype: image.mimeType, name: `${slug}.png`, size: image.data.length },

@@ -6,65 +6,6 @@ type TemplateImageInput = {
   category?: string
 }
 
-function escapeText(value: string) {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
-async function coverHeadline(title: string, width: number) {
-  if (!title.trim()) return { text: '', fontSize: 48 }
-  const words = title.replace(/^\[DEMO\]\s*/i, '').trim().split(/\s+/)
-  const measure = async (text: string, fontSize: number) => (await sharp({ text: {
-    text: escapeText(text), font: `DejaVu Sans Bold ${fontSize}`, dpi: 72,
-  } }).metadata()).width || 0
-
-  const wrapCompleteTitle = async (fontSize: number) => {
-    const lines: string[] = []
-    let line = ''
-    for (const word of words) {
-      const candidate = line ? `${line} ${word}` : word
-      if (await measure(candidate, fontSize) <= width) {
-        line = candidate
-      } else if (lines.length === 0 && line && await measure(word, fontSize) <= width) {
-        lines.push(line)
-        line = word
-      } else {
-        return undefined
-      }
-    }
-    if (line) lines.push(line)
-    return lines.length <= 2 ? lines : undefined
-  }
-
-  for (let fontSize = 48; fontSize >= 36; fontSize -= 2) {
-    const lines = await wrapCompleteTitle(fontSize)
-    if (lines) return { text: lines.join('\n'), fontSize }
-  }
-
-  const fontSize = 36
-  const lines: string[] = []
-  let line = ''
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word
-    if (await measure(candidate, fontSize) <= width) {
-      line = candidate
-    } else if (lines.length === 0 && line) {
-      lines.push(line)
-      line = word
-    } else {
-      break
-    }
-  }
-  if (line && lines.length < 2) lines.push(line)
-  if (!lines.length) lines.push(words[0] || '')
-  let last = lines.pop()!
-  while (last && await measure(`${last}…`, fontSize) > width) {
-    const boundary = last.lastIndexOf(' ')
-    last = boundary > 0 ? last.slice(0, boundary) : last.slice(0, -1)
-  }
-  lines.push(`${last}…`)
-  return { text: lines.join('\n'), fontSize }
-}
-
 type RGB = [number, number, number]
 
 type Palette = {
@@ -218,14 +159,6 @@ function rgb(color: RGB): string {
   return `rgb(${color[0]}, ${color[1]}, ${color[2]})`
 }
 
-function luminance(color: RGB): number {
-  const linear = color.map((channel) => {
-    const value = channel / 255
-    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
-  })
-  return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722
-}
-
 /**
  * Creates a left-to-right background gradient.
  *
@@ -256,10 +189,6 @@ export async function generateTemplateImage(input: TemplateImageInput) {
   const columns = 32
   const tileSize = width / columns
   const rows = Math.ceil(height / tileSize)
-  // Include a tile-sized buffer around the maximum title bounds.
-  const hasTitle = Boolean(input.title.trim())
-  const textArea = { left: 448, top: 26, right: 1174, bottom: 342 }
-
   const seed = hash(`${input.slug}:${input.category || ''}`)
 
   const palette = PALETTES[seed % PALETTES.length]
@@ -318,20 +247,6 @@ export async function generateTemplateImage(input: TemplateImageInput) {
 
       color = mixColor(color, palette.glow, glowStrength * 0.92)
 
-      // Lighten existing tiles, rather than adding a white panel. Every tile
-      // beneath the dark title reaches at least 4.5:1 contrast; fade outside it.
-      if (hasTitle) {
-        const dx = Math.max(textArea.left - (x + tileSize), x - textArea.right, 0)
-        const dy = Math.max(textArea.top - (y + tileSize), y - textArea.bottom, 0)
-        const blend = clamp(1 - Math.hypot(dx, dy) / 120)
-        let readable = color
-        const minimumLuminance = 4.5 * (luminance([32, 28, 50]) + 0.05) - 0.05
-        while (luminance(readable) < minimumLuminance) {
-          readable = mixColor(readable, [246, 244, 250], 0.08)
-        }
-        color = mixColor(color, readable, blend)
-      }
-
       tiles.push(
         `<rect x="${x}" y="${y}" width="${tileSize + 0.15}" height="${tileSize + 0.15}" fill="${rgb(color)}"/>`,
       )
@@ -348,14 +263,7 @@ export async function generateTemplateImage(input: TemplateImageInput) {
   for (let index = 0; index < accentCount; index += 1) {
     // Spread accents across distinct columns and keep them inside the canvas.
     const column = 2 + index * 4 + Math.floor(random(seed, `accent-x-${index}`) * 3)
-    let row = 1 + Math.floor(random(seed, `accent-y-${index}`) * (Math.floor(height / tileSize) - 2))
-    if (hasTitle && (column + 1) * tileSize > textArea.left &&
-        column * tileSize < textArea.right && (row + 1) * tileSize > textArea.top &&
-        row * tileSize < textArea.bottom) {
-      // Retain the accent, but move it below the title's clear space.
-      const firstRow = Math.ceil(textArea.bottom / tileSize)
-      row = firstRow + Math.floor(random(seed, `accent-safe-${index}`) * (Math.floor(height / tileSize) - firstRow - 1))
-    }
+    const row = 1 + Math.floor(random(seed, `accent-y-${index}`) * (Math.floor(height / tileSize) - 2))
     const accentColors: RGB[] = [
       adjustBrightness(palette.dark, -22),
       mixColor(palette.light, [255, 240, 209], 0.55),
@@ -395,34 +303,7 @@ export async function generateTemplateImage(input: TemplateImageInput) {
     </svg>
   `
 
-  // Pango measures and wraps the title, shrinking longer titles to fit.
-  // Escape markup so article titles are always rendered as literal text.
-  const headline = await coverHeadline(input.title, 640)
-  const escapedTitle = headline.text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
-  const titleWidth = 650
-  const title = escapedTitle ? await sharp({
-    text: {
-      text: `<span foreground="#201C32">${escapedTitle}</span>`,
-      font: `DejaVu Sans Bold ${headline.fontSize}`,
-      width: titleWidth,
-      dpi: 72,
-      align: 'right',
-      wrap: 'word-char',
-      rgba: true,
-    },
-  }).png().toBuffer({ resolveWithObject: true }) : undefined
-
   const data = await sharp(Buffer.from(svg))
-    .composite(title ? [{
-      input: title.data,
-      left: width - 64 - title.info.width,
-      top: 64,
-    }] : [])
     .png({ compressionLevel: 9 })
     .toBuffer()
 

@@ -1,15 +1,9 @@
 import sharp from 'sharp'
-import {
-  parseService,
-  selectServiceScene,
-  type ServiceCategory,
-} from './serviceCategory'
 
 type TemplateImageInput = {
   title: string
   slug: string
   category?: string
-  serviceCategory?: ServiceCategory
 }
 
 function escapeText(value: string) {
@@ -41,13 +35,11 @@ async function coverHeadline(title: string, width: number) {
     return lines.length <= 2 ? lines : undefined
   }
 
-  // Preserve the complete title whenever it remains readable at thumbnail size.
   for (let fontSize = 48; fontSize >= 36; fontSize -= 2) {
     const lines = await wrapCompleteTitle(fontSize)
     if (lines) return { text: lines.join('\n'), fontSize }
   }
 
-  // Extremely long titles still stay inside two lines at the minimum size.
   const fontSize = 36
   const lines: string[] = []
   let line = ''
@@ -175,14 +167,6 @@ const PALETTES: Palette[] = [
   },
 ]
 
-// Category-specific subsets keep the service recognisable while the selected
-// palette still varies from article to article.
-const SERVICE_PALETTES: Record<ServiceCategory, number[]> = {
-  furniture: [2, 3, 4, 5],
-  roofing: [0, 3, 4, 6],
-  plumbing: [0, 1, 2, 6],
-}
-
 /**
  * Produces a stable unsigned number from a string.
  */
@@ -278,16 +262,7 @@ export async function generateTemplateImage(input: TemplateImageInput) {
 
   const seed = hash(`${input.slug}:${input.category || ''}`)
 
-  const service = input.serviceCategory || parseService(input.category)
-  const paletteChoices = service ? SERVICE_PALETTES[service] : undefined
-  const paletteIndex = paletteChoices
-    ? paletteChoices[hash(`${seed}:palette`) % paletteChoices.length]
-    : seed % PALETTES.length
-  const palette = PALETTES[paletteIndex]
-  const scene = service ? selectServiceScene(service, input.title, input.slug) : undefined
-  // Scenes occupy the left side and stop exactly where protected title space begins.
-  const sceneColumn = 1
-  const sceneRow = 3
+  const palette = PALETTES[seed % PALETTES.length]
 
   /**
    * Move the glow between images while keeping it inside the canvas.
@@ -341,23 +316,7 @@ export async function generateTemplateImage(input: TemplateImageInput) {
         -(distance * distance) / (2 * glowRadius * glowRadius),
       )
 
-      if (scene) {
-        const sceneDistance = Math.hypot(centerX - 6.5 * tileSize, centerY - 9 * tileSize)
-        const halo = Math.exp(-(sceneDistance ** 2) / (2 * (glowRadius * 1.25) ** 2)) * 0.2
-        color = mixColor(color, palette.glow, halo)
-        const pixel = scene.pixels[row - sceneRow]?.[column - sceneColumn]
-        if (pixel === '1') {
-          color = mixColor(palette.glow, palette.light, 0.12)
-        } else if (pixel === '2') {
-          color = mixColor(palette.glow, [255, 245, 224], 0.48)
-        } else if (pixel === '3') {
-          color = mixColor(palette.glow, palette.dark, 0.62)
-        } else if (pixel === '4') {
-          color = mixColor(palette.accents[0], [232, 246, 255], 0.4)
-        }
-      } else {
-        color = mixColor(color, palette.glow, glowStrength * 0.92)
-      }
+      color = mixColor(color, palette.glow, glowStrength * 0.92)
 
       // Lighten existing tiles, rather than adding a white panel. Every tile
       // beneath the dark title reaches at least 4.5:1 contrast; fade outside it.
@@ -390,10 +349,6 @@ export async function generateTemplateImage(input: TemplateImageInput) {
     // Spread accents across distinct columns and keep them inside the canvas.
     const column = 2 + index * 4 + Math.floor(random(seed, `accent-x-${index}`) * 3)
     let row = 1 + Math.floor(random(seed, `accent-y-${index}`) * (Math.floor(height / tileSize) - 2))
-    if (scene && column >= sceneColumn && column < sceneColumn + 11 &&
-        row >= sceneRow && row < sceneRow + 12) {
-      row = 1 + index % 3
-    }
     if (hasTitle && (column + 1) * tileSize > textArea.left &&
         column * tileSize < textArea.right && (row + 1) * tileSize > textArea.top &&
         row * tileSize < textArea.bottom) {

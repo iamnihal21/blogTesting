@@ -59,7 +59,6 @@ try {
       title,
       slug,
       category: category.name,
-      serviceCategory: article.serviceCategory,
     })
     const media = await payload.create({
       collection: 'media', data: { alt: article.imageAlt },

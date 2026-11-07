@@ -5,7 +5,6 @@ import { generateArticle, generateImage } from '@/lib/ai-blog/openrouter'
 import { generateTemplateImage } from '@/lib/ai-blog/templateImage'
 import type { GenerateBlogInput } from '@/lib/ai-blog/types'
 import { parseService, SERVICE_NAMES } from '@/lib/ai-blog/serviceCategory'
-import { generateVectorImage } from '@/lib/ai-blog/vectorImage'
 
 function extensionFor(mimeType: string) {
   if (mimeType === 'image/jpeg') return 'jpg'
@@ -57,7 +56,7 @@ export const generateBlog: PayloadHandler = async (req) => {
       return Response.json({ error: 'Choose Furniture, Roofing or Plumbing, or leave the category automatic.' }, { status: 400 })
     }
     const article = await generateArticle(input)
-    const imageMode = process.env.BLOG_IMAGE_MODE || 'vector'
+    const imageMode = process.env.BLOG_IMAGE_MODE || 'template'
     const service = selectedService || article.serviceCategory
     const findCategory = async () => (await req.payload.find({
       collection: 'categories', where: { slug: { equals: service } }, limit: 1, depth: 0,
@@ -76,19 +75,12 @@ export const generateBlog: PayloadHandler = async (req) => {
       ? null
       : imageMode === 'ai'
         ? await generateImage(article.imagePrompt)
-        : imageMode === 'pixel'
-          ? await generateTemplateImage({
-              title: article.title,
-              slug: article.slug,
-              category: category?.name,
-              serviceCategory: service,
-            })
-          : await generateVectorImage({
-              title: article.title,
-              slug: article.slug,
-              serviceCategory: service,
-            })
-    const imageAlt = imageMode !== 'ai'
+        : await generateTemplateImage({
+            title: article.title,
+            slug: article.slug,
+            category: category?.name,
+          })
+    const imageAlt = imageMode === 'template'
       ? `${article.title} — Material Mate ${category?.name || 'guide'} cover`
       : article.imageAlt
 

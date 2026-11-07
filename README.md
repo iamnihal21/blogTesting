@@ -221,7 +221,7 @@ The server then:
 
 1. Sends the editorial brief to the configured GPT model through OpenRouter.
 2. Requires structured JSON containing the article sections, SEO metadata, tags, alt text, and a separate image brief.
-3. Builds a free, deterministic 1200×630 category scene from the article title, slug and service by default.
+3. Builds a free, deterministic 1200×630 pixel-grid cover with a coloured globe by default.
 4. Renders the SVG template to PNG with Sharp and uploads it to the Payload `media` collection.
 5. Saves the article, SEO fields, tags, author, category, and image as a **draft**.
 6. Opens the Payload editor for fact checking and human approval. AI drafts are never published automatically.
@@ -239,23 +239,17 @@ Configure these variables:
 ```env
 OPENROUTER_API_KEY=your-secret-key
 OPENROUTER_TEXT_MODEL=openai/gpt-4.1-mini
-# Free local vector cover generation is the default.
-BLOG_IMAGE_MODE=vector
+# Free local globe cover generation is the default.
+BLOG_IMAGE_MODE=template
 # Used only when BLOG_IMAGE_MODE=ai.
 OPENROUTER_IMAGE_MODEL=qwen/qwen-image-2.1-turbo
 ```
 
-### Free non-AI vector covers
-
-The shared generator is `src/lib/ai-blog/vectorImage.ts`. It exports `createVectorCoverSVG({ title, slug, serviceCategory })` for editable SVG and `generateVectorImage(...)` for PNG bytes. Use `furniture`, `roofing` or `plumbing` for `serviceCategory`. Rich category palettes, warm lighting and decorative objects are rendered locally; the slug keeps colour selection repeatable.
-
-Run `npm run export:covers` to export nine examples (three per category) as SVG and PNG, plus a contact sheet at `generated-covers/preview.png`. No API key, database or running server is needed. The export script is `scripts/export-vector-covers.ts`; edit its example titles to preview other topics. New drafts in Payload use this same generator automatically when `BLOG_IMAGE_MODE=vector` or `template`.
+### Free globe cover template
 
 Generated articles now include a validated primary service: Furniture, Roofing or Plumbing. The generator saves the matching Payload category (creating it if absent). An existing service selected in the admin dropdown overrides the automatic classification; leave it on **Auto-detect from article** otherwise. Other existing categories and posts are preserved.
 
-The default renderer creates detailed flat SVG illustrations without an image model. Furniture uses a furnished room and changes its centrepiece between a sofa, storage unit and table. Roofing uses a house scene and adds weather or an inspection ladder when relevant. Plumbing uses a fitted bathroom and changes between shower, pipework and basin details. The slug selects a repeatable category palette, and a small service badge keeps the system consistent.
-
-`BLOG_IMAGE_MODE=vector` creates the SVG locally, renders it to a 1200×630 PNG with Sharp, uploads it to Payload Media, and assigns it as both the featured and Open Graph image. It has no image API or per-image charge. The article title stays in the page layout instead of being repeated inside the cover. `template` is accepted as a backwards-compatible alias for vector mode, so existing local `.env` files switch to the new renderer after pulling. Use `BLOG_IMAGE_MODE=pixel` only to retain the earlier pixel renderer. Existing uploaded covers are unchanged; newly generated drafts use the vector design.
+`BLOG_IMAGE_MODE=template` creates the original abstract cover locally with no image API or per-image charge. It uses a visible 32-column pixel grid, a soft coloured globe, sparse accent squares and a dark right-aligned headline. Long headlines shrink to remain within two lines and use an ellipsis only when they cannot fit at the minimum readable size. The slug and category select a repeatable palette, while each generated article still receives its automatically classified Furniture, Roofing or Plumbing category. Sharp renders the SVG template to a 1200×630 PNG and Payload uses it as both the featured and Open Graph image. Existing uploaded covers are unchanged; newly generated drafts use the globe design.
 
 Run `node --import tsx scripts/test-service-generation.ts` to test classification, category overrides, media/post linkage and rejection paths with simulated provider and database responses (no credits or database required).
 
